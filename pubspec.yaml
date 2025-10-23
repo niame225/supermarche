@@ -1,0 +1,30 @@
+name: supermarche_app
+description: Application de gestion de supermarché avec impression Bluetooth/WiFi
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Réseau
+  http: ^0.13.6
+  dio: ^5.4.0  # ← Ajouté ici
+  # Bluetooth
+  flutter_blue_plus: ^1.29.0
+  # Permissions Android
+  permission_handler: ^11.3.1
+  # Persistance locale
+  shared_preferences: ^2.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/

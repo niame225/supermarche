@@ -1,0 +1,21 @@
+# Fichiers de build
+/build/
+.gradle/
+.android/
+.ios/
+
+# Environnement local
+.env
+local.properties
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Autres
+pubspec.lock
