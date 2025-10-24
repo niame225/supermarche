@@ -2,16 +2,16 @@ workflows:
   android-workflow:
     name: Build Android APK & AAB - Supermarché App
     max_build_duration: 60
-    instance_type: mac_mini_m1
+
+    # Suppression de instance_type (inutile pour Android seul)
+    # Suppression de xcode/cocoapods (non nécessaires)
 
     environment:
-      flutter: 3.19.0
-      xcode: latest
-      cocoapods: default
+      flutter: 3.24.0  # Version stable récente, compatible avec tes plugins
       groups:
         - default
       vars:
-        JAVA_HOME: /Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
+        JAVA_HOME: /usr/lib/jvm/zulu17-ca-amd64  # Chemin standard sur builder Linux
 
     cache:
       cache_paths:
@@ -19,57 +19,58 @@ workflows:
         - $HOME/.gradle
 
     scripts:
-      - name: 🧩 Configuration de local.properties
+      - name: 🧩 Configuration de local.properties avec AndroidX
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
-          echo "✅ Fichier local.properties créé avec succès"
+          echo "flutter.sdk=$FLUTTER_ROOT" >> "$CM_BUILD_DIR/android/local.properties"
+          echo "android.useAndroidX=true" >> "$CM_BUILD_DIR/android/local.properties"
+          echo "android.enableJetifier=true" >> "$CM_BUILD_DIR/android/local.properties"
+          echo "✅ local.properties configuré avec AndroidX"
 
-      - name: 📦 Récupération des dépendances Flutter
+      - name: 🧹 Nettoyage initial
         script: |
           flutter clean
-          flutter pub get
-          echo "✅ Dépendances téléchargées avec succès"
+          rm -rf android/.gradle  # Évite les caches Gradle corrompus
 
-      - name: 🔍 Analyse du code Flutter
+      - name: 📦 Récupération des dépendances
         script: |
-          set -e
-          flutter analyze || echo "⚠️ Avertissements détectés (non bloquants)"
+          flutter pub get
+          echo "✅ Dépendances installées"
+
+      - name: 🔍 Analyse du code (non bloquant)
+        script: |
+          flutter analyze || echo "⚠️ Analyse terminée (avertissements ignorés)"
 
       - name: 🚀 Construction de l'APK Release
         script: |
-          echo "📦 Construction de l'APK Release..."
-          flutter build apk --release --verbose
-
+          flutter build apk --release --no-tree-shake-icons
           if [ ! -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
-            echo "❌ ERREUR: APK release non créé !"
+            echo "❌ Échec : APK non généré"
             exit 1
           fi
-          echo "✅ APK Release créé avec succès"
+          echo "✅ APK Release prêt"
 
       - name: 🏗️ Construction du Bundle AAB
         script: |
-          echo "📦 Construction du Bundle AAB..."
-          flutter build appbundle --release --verbose
-
+          flutter build appbundle --release --no-tree-shake-icons
           if [ ! -f "build/app/outputs/bundle/release/app-release.aab" ]; then
-            echo "❌ ERREUR: AAB release non créé !"
+            echo "❌ Échec : AAB non généré"
             exit 1
           fi
-          echo "✅ AAB Release créé avec succès"
+          echo "✅ AAB Release prêt"
 
-      - name: 🧾 Génération des informations de build
+      - name: 🧾 Informations de build
         script: |
           cat > build_info.txt << EOF
-          ========================================
-          BUILD INFORMATION - Supermarché App
-          ========================================
-          Date de build : $(date '+%Y-%m-%d %H:%M:%S')
-          Flutter Version : $(flutter --version | head -n 1)
-          Android SDK : $ANDROID_SDK_ROOT
-          Commit : $CM_COMMIT
-          Branche : $CM_BRANCH
-          ========================================
-          EOF
+========================================
+BUILD INFORMATION - Supermarché App
+========================================
+Date : $(date '+%Y-%m-%d %H:%M:%S')
+Flutter : $(flutter --version | head -n1)
+Commit : $CM_COMMIT
+Branche : $CM_BRANCH
+========================================
+EOF
           cat build_info.txt
 
     artifacts:
@@ -85,5 +86,5 @@ workflows:
           success: true
           failure: true
         message: |
-          🚀 Le build Android de *Supermarché App* s'est terminé avec succès !
-          📦 Les fichiers APK et AAB sont disponibles dans les artifacts Codemagic.
+          🚀 Le build Android de *Supermarché App* est terminé !
+          📦 Fichiers APK/AAB disponibles dans les artifacts.
