@@ -2,79 +2,68 @@ workflows:
   android-workflow:
     name: Build Android APK & AAB - Supermarché App
     max_build_duration: 60
-
     environment:
       flutter: 3.24.0
       groups:
         - default
       vars:
         JAVA_HOME: /usr/lib/jvm/zulu17-ca-amd64
-
     cache:
       cache_paths:
         - $FLUTTER_ROOT/.pub-cache
         - $HOME/.gradle
-
     scripts:
-      - name: 🧩 Configuration de local.properties avec AndroidX
+      - name: Configuration de local.properties avec AndroidX
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
           echo "flutter.sdk=$FLUTTER_ROOT" >> "$CM_BUILD_DIR/android/local.properties"
           echo "android.useAndroidX=true" >> "$CM_BUILD_DIR/android/local.properties"
           echo "android.enableJetifier=true" >> "$CM_BUILD_DIR/android/local.properties"
-          echo "✅ local.properties configuré avec AndroidX"
-
-      - name: 🧹 Nettoyage initial
+          echo "local.properties configured"
+      - name: Nettoyage initial
         script: |
           flutter clean
           rm -rf android/.gradle
-
-      - name: 📦 Récupération des dépendances
+      - name: Récupération des dépendances
         script: |
           flutter pub get
-          echo "✅ Dépendances installées"
-
-      - name: 🔍 Analyse du code (non bloquant)
+          echo "Dependencies installed"
+      - name: Analyse du code
         script: |
-          flutter analyze || echo "⚠️ Analyse terminée (avertissements ignorés)"
-
-      - name: 🚀 Construction de l'APK Release
+          flutter analyze || echo "Analysis completed"
+      - name: Construction de l'APK Release
         script: |
           flutter build apk --release --no-tree-shake-icons
           if [ ! -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
-            echo "❌ Échec : APK non généré"
+            echo "APK build failed"
             exit 1
           fi
-          echo "✅ APK Release prêt"
-
-      - name: 🏗️ Construction du Bundle AAB
+          echo "APK Release ready"
+      - name: Construction du Bundle AAB
         script: |
           flutter build appbundle --release --no-tree-shake-icons
           if [ ! -f "build/app/outputs/bundle/release/app-release.aab" ]; then
-            echo "❌ Échec : AAB non généré"
+            echo "AAB build failed"
             exit 1
           fi
-          echo "✅ AAB Release prêt"
-
-      - name: 🧾 Informations de build
+          echo "AAB Release ready"
+      - name: Informations de build
         script: |
           cat > build_info.txt << 'EOF'
           ========================================
-          BUILD INFORMATION - Supermarché App
-          ========================================
-          Date : $(date '+%Y-%m-%d %H:%M:%S')
-          Flutter : $(flutter --version | head -n1)
-          Commit : $CM_COMMIT
-          Branche : $CM_BRANCH
+          BUILD INFORMATION - Supermarche App
           ========================================
           EOF
+          echo "Date: $(date '+%Y-%m-%d %H:%M:%S')" >> build_info.txt
+          echo "Flutter: $(flutter --version | head -n1)" >> build_info.txt
+          echo "Commit: $CM_COMMIT" >> build_info.txt
+          echo "Branch: $CM_BRANCH" >> build_info.txt
+          echo "========================================" >> build_info.txt
           cat build_info.txt
-
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
       - build/app/outputs/bundle/release/app-release.aab
       - build_info.txt
-
     publishing:
       email:
         recipients:
