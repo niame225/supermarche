@@ -3,15 +3,12 @@ workflows:
     name: Build Android APK & AAB - Supermarché App
     max_build_duration: 60
 
-    # Suppression de instance_type (inutile pour Android seul)
-    # Suppression de xcode/cocoapods (non nécessaires)
-
     environment:
-      flutter: 3.24.0  # Version stable récente, compatible avec tes plugins
+      flutter: 3.24.0
       groups:
         - default
       vars:
-        JAVA_HOME: /usr/lib/jvm/zulu17-ca-amd64  # Chemin standard sur builder Linux
+        JAVA_HOME: /usr/lib/jvm/zulu17-ca-amd64
 
     cache:
       cache_paths:
@@ -30,7 +27,7 @@ workflows:
       - name: 🧹 Nettoyage initial
         script: |
           flutter clean
-          rm -rf android/.gradle  # Évite les caches Gradle corrompus
+          rm -rf android/.gradle
 
       - name: 📦 Récupération des dépendances
         script: |
@@ -61,16 +58,16 @@ workflows:
 
       - name: 🧾 Informations de build
         script: |
-          cat > build_info.txt << EOF
-========================================
-BUILD INFORMATION - Supermarché App
-========================================
-Date : $(date '+%Y-%m-%d %H:%M:%S')
-Flutter : $(flutter --version | head -n1)
-Commit : $CM_COMMIT
-Branche : $CM_BRANCH
-========================================
-EOF
+          cat > build_info.txt << 'EOF'
+          ========================================
+          BUILD INFORMATION - Supermarché App
+          ========================================
+          Date : $(date '+%Y-%m-%d %H:%M:%S')
+          Flutter : $(flutter --version | head -n1)
+          Commit : $CM_COMMIT
+          Branche : $CM_BRANCH
+          ========================================
+          EOF
           cat build_info.txt
 
     artifacts:
