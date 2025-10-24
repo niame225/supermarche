@@ -82,6 +82,3 @@ workflows:
         notify:
           success: true
           failure: true
-        message: |
-          🚀 Le build Android de *Supermarché App* est terminé !
-          📦 Fichiers APK/AAB disponibles dans les artifacts.
