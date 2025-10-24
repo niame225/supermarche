@@ -27,6 +27,11 @@
         android:label="Supermarche"
         android:icon="@mipmap/ic_launcher">
         
+        <!-- Spécifie l'utilisation de Flutter embedding v2 -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+        
         <activity
             android:name=".MainActivity"
             android:exported="true"
