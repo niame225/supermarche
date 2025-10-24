@@ -1,186 +1,89 @@
-# codemagic.yaml - Configuration complète pour build Android APK
-
 workflows:
   android-workflow:
-    name: Build Android APK - Supermarché App
+    name: Build Android APK & AAB - Supermarché App
     max_build_duration: 60
     instance_type: mac_mini_m1
-    
+
     environment:
-      android_signing:
-        # Configuration de signature (optionnel pour debug)
-        # Pour release signé, décommentez et configurez dans Codemagic UI
-        # - keystore_reference
-      
-      groups:
-        # Groupes de variables d'environnement (à configurer dans Codemagic UI)
-        # - app_credentials
-      
-      flutter: stable
+      flutter: 3.19.0
       xcode: latest
       cocoapods: default
-      
+      groups:
+        - default
       vars:
-        # Variables personnalisables
-        FLUTTER_VERSION: "3.19.0"  # Version Flutter stable
         JAVA_HOME: /Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home
-    
-    triggering:
-      events:
-        - push
-        - tag
-        - pull_request
-      branch_patterns:
-        - pattern: 'main'
-          include: true
-          source: true
-        - pattern: 'develop'
-          include: true
-          source: true
-    
+
+    cache:
+      cache_paths:
+        - $FLUTTER_ROOT/.pub-cache
+        - $HOME/.gradle
+
     scripts:
-      - name: Set up local.properties
+      - name: 🧩 Configuration de local.properties
         script: |
-          echo "Configuration des chemins Android..."
           echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
-      
-      - name: Get Flutter packages
+          echo "✅ Fichier local.properties créé avec succès"
+
+      - name: 📦 Récupération des dépendances Flutter
         script: |
-          echo "📦 Installation des dépendances Flutter..."
+          flutter clean
           flutter pub get
-      
-      - name: Verify Android configuration
+          echo "✅ Dépendances téléchargées avec succès"
+
+      - name: 🔍 Analyse du code Flutter
         script: |
-          echo "✅ Vérification de la configuration Android..."
-          
-          # Vérification du fichier AndroidManifest.xml
-          if [ ! -f "android/app/src/main/AndroidManifest.xml" ]; then
-            echo "❌ ERREUR: AndroidManifest.xml introuvable !"
-            exit 1
-          fi
-          
-          echo "✅ AndroidManifest.xml trouvé"
-          
-          # Affichage des permissions configurées
-          echo "📋 Permissions Android configurées:"
-          grep -E "uses-permission|uses-feature" android/app/src/main/AndroidManifest.xml || echo "Aucune permission trouvée"
-      
-      - name: Flutter analyze
+          set -e
+          flutter analyze || echo "⚠️ Avertissements détectés (non bloquants)"
+
+      - name: 🚀 Construction de l'APK Release
         script: |
-          echo "🔍 Analyse statique du code Flutter..."
-          flutter analyze || echo "⚠️ Warnings détectés (non bloquant)"
-      
-      - name: Build Android Debug APK
-        script: |
-          echo "🔨 Construction de l'APK Debug..."
-          flutter build apk --debug --verbose
-          
-          # Vérification de la création de l'APK
-          if [ ! -f "build/app/outputs/flutter-apk/app-debug.apk" ]; then
-            echo "❌ ERREUR: APK debug non créé !"
-            exit 1
-          fi
-          
-          echo "✅ APK Debug créé avec succès"
-          ls -lh build/app/outputs/flutter-apk/app-debug.apk
-      
-      - name: Build Android Release APK
-        script: |
-          echo "🚀 Construction de l'APK Release..."
+          echo "📦 Construction de l'APK Release..."
           flutter build apk --release --verbose
-          
-          # Vérification de la création de l'APK
+
           if [ ! -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
             echo "❌ ERREUR: APK release non créé !"
             exit 1
           fi
-          
           echo "✅ APK Release créé avec succès"
-          ls -lh build/app/outputs/flutter-apk/app-release.apk
-      
-      - name: Generate build info
+
+      - name: 🏗️ Construction du Bundle AAB
         script: |
-          echo "📄 Génération des informations de build..."
-          
+          echo "📦 Construction du Bundle AAB..."
+          flutter build appbundle --release --verbose
+
+          if [ ! -f "build/app/outputs/bundle/release/app-release.aab" ]; then
+            echo "❌ ERREUR: AAB release non créé !"
+            exit 1
+          fi
+          echo "✅ AAB Release créé avec succès"
+
+      - name: 🧾 Génération des informations de build
+        script: |
           cat > build_info.txt << EOF
           ========================================
-          BUILD INFORMATION
+          BUILD INFORMATION - Supermarché App
           ========================================
-          Build Date: $(date '+%Y-%m-%d %H:%M:%S')
-          Flutter Version: $(flutter --version | head -n 1)
-          Dart Version: $(dart --version | head -n 1)
-          Android SDK: $ANDROID_SDK_ROOT
-          Build Number: $CM_BUILD_NUMBER
-          Commit: $CM_COMMIT
-          Branch: $CM_BRANCH
+          Date de build : $(date '+%Y-%m-%d %H:%M:%S')
+          Flutter Version : $(flutter --version | head -n 1)
+          Android SDK : $ANDROID_SDK_ROOT
+          Commit : $CM_COMMIT
+          Branche : $CM_BRANCH
           ========================================
           EOF
-          
           cat build_info.txt
-    
-    artifacts:
-      # APKs générés
-      - build/app/outputs/flutter-apk/app-debug.apk
-      - build/app/outputs/flutter-apk/app-release.apk
-      - build/app/outputs/flutter-apk/*.apk
-      
-      # Fichiers de mapping (utiles pour debug)
-      - build/app/outputs/mapping/release/mapping.txt
-      
-      # Logs de build
-      - build_info.txt
-      - flutter_build.log
-    
-    publishing:
-      email:
-        recipients:
-          - your-email@example.com  # ⚠️ REMPLACEZ PAR VOTRE EMAIL
-        notify:
-          success: true      # Notification en cas de succès
-          failure: true      # Notification en cas d'échec
-          started: false     # Pas de notification au démarrage
-      
-      # Pour publication automatique sur Google Play (optionnel)
-      # google_play:
-      #   credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-      #   track: internal
-      #   submit_as_draft: true
-      
-      # Pour Slack (optionnel)
-      # slack:
-      #   channel: '#builds'
-      #   notify_on_build_start: false
-      #   notify:
-      #     success: true
-      #     failure: true
 
-  # Workflow alternatif pour tests uniquement
-  android-test-workflow:
-    name: Android Tests Only
-    max_build_duration: 30
-    instance_type: mac_mini_m1
-    
-    environment:
-      flutter: stable
-    
-    scripts:
-      - name: Get Flutter packages
-        script: flutter pub get
-      
-      - name: Run Flutter tests
-        script: |
-          echo "🧪 Exécution des tests..."
-          flutter test || echo "⚠️ Certains tests ont échoué"
-      
-      - name: Run Flutter analyze
-        script: |
-          echo "🔍 Analyse du code..."
-          flutter analyze
-    
     artifacts:
-      - test_results/**/*.xml
-    
+      - build/app/outputs/flutter-apk/app-release.apk
+      - build/app/outputs/bundle/release/app-release.aab
+      - build_info.txt
+
     publishing:
       email:
         recipients:
           - niame225@gmail.com
+        notify:
+          success: true
+          failure: true
+        message: |
+          🚀 Le build Android de *Supermarché App* s'est terminé avec succès !
+          📦 Les fichiers APK et AAB sont disponibles dans les artifacts Codemagic.
